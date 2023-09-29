@@ -1,6 +1,6 @@
 <div align="center">
   <h1> Adonis Transmit Client</h1>
-  <p>A client for the native Server-Sent-Event (SSE) module of CodeSyncr.</p>
+  <p>A client for the native Server-Sent-Event (SSE) module of Adonis Transmit.</p>
 </div>
 
 <br />
@@ -27,7 +27,7 @@
 
 <hr />
 
-CodeSyncr Transmit Client is a client for the native Server-Sent-Event (SSE) module of CodeSyncr. It is built on top of the [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/ntSource) API and provides a simple API to receive events from the server.
+Adonis Transmit Client is a client for the native Server-Sent-Event (SSE) module of Adonis Transmit. It is built on top of the [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/ntSource) API and provides a simple API to receive events from the server.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -48,13 +48,13 @@ CodeSyncr Transmit Client is a client for the native Server-Sent-Event (SSE) mod
 Install the package from the npm registry as follows:
 
 ```sh
-npm i @CodeSyncr/transmit-client
+npm i @brighthustle/transmit-client
 
 # yarn
-yarn add @CodeSyncr/transmit-client
+yarn add @brighthustle/transmit-client
 
 # pnpm
-pnpm add @CodeSyncr/transmit-client
+pnpm add @brighthustle/transmit-client
 ```
 
 ## Usage
@@ -62,7 +62,7 @@ pnpm add @CodeSyncr/transmit-client
 The module exposes a `Transmit` class, which can be used to connect to the server and listen for events.
 
 ```ts
-import { Transmit } from '@CodeSyncr/transmit-client'
+import { Transmit } from '@brighthustle/transmit-client'
 
 const transmit = new Transmit({
   baseUrl: 'http://localhost:3333',

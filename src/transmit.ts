@@ -185,6 +185,7 @@ export class Transmit extends EventTarget {
     }
 
     if (typeof callback !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-shadow
       const listeners = this.#listeners.get(channel)
 
       if (typeof listeners === 'undefined') {
