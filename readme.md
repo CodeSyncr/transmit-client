@@ -57,6 +57,12 @@ yarn add @brighthustle/transmit-client
 pnpm add @brighthustle/transmit-client
 ```
 
+Using the package as script tag on HTML:
+
+```sh
+<script src="https://www.unpkg.com/@brighthustle/transmit-client@0.0.3/src/transmit.js"></script>
+```
+
 ## Usage
 
 The module exposes a `Transmit` class, which can be used to connect to the server and listen for events.
