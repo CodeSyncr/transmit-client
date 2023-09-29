@@ -19,7 +19,7 @@ export const TransmitStatus = {
 
 type TTransmitStatus = (typeof TransmitStatus)[keyof typeof TransmitStatus]
 
-class Transmit extends EventTarget {
+export class Transmit extends EventTarget {
   // Remove private identifiers
   uid: string = crypto.randomUUID()
   options: TransmitOptions
