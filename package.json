@@ -30,7 +30,7 @@
     "pretest": "npm run lint",
     "build": "microbundle",
     "dev": "microbundle watch",
-    "release": "np",
+    "release": "np --message=\"chore(release): %s\" --no-tests ",
     "version": "npm run build",
     "prepublishOnly": "npm run build"
   },
