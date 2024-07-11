@@ -14,14 +14,14 @@
   "license": "MIT",
   "author": "Kumar Yash, Romain Lanz",
   "type": "module",
-  "source": "src/transmit.ts",
+  "source": "index.ts",
   "exports": {
-    "require": "./build/transmit.cjs",
-    "default": "./build/transmit.modern.js"
+    "require": "./build/index.cjs",
+    "default": "./build/index.modern.js"
   },
-  "main": "./build/transmit.js",
-  "module": "./build/transmit.module.js",
-  "unpkg": "./build/transmit.umd.js",
+  "main": "./build/index.js",
+  "module": "./build/index.module.js",
+  "unpkg": "./build/index.umd.js",
   "scripts": {
     "clean": "del-cli build",
     "typecheck": "tsc --noEmit",
