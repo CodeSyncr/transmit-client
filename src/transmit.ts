@@ -126,12 +126,12 @@ export class Transmit extends EventTarget {
     this.connect()
   }
 
-  changeStatus(status: TransmitStatus) {
+  private changeStatus(status: TransmitStatus) {
     this.status = status
     this.dispatchEvent(new CustomEvent(status))
   }
 
-  connect() {
+  private connect() {
     this.changeStatus(TransmitStatus.Connecting)
 
     const url = new URL(this.options.baseUrl + '/__transmit/events')
@@ -155,7 +155,7 @@ export class Transmit extends EventTarget {
     })
   }
 
-  onMessage(event: MessageEvent) {
+  private onMessage(event: MessageEvent) {
     const data = JSON.parse(event.data)
     const subscription = this.subscriptions.get(data.channel)
 
@@ -171,7 +171,7 @@ export class Transmit extends EventTarget {
     }
   }
 
-  onError() {
+  private onError() {
     if (this.status !== TransmitStatus.Reconnecting) {
       this.changeStatus(TransmitStatus.Disconnected)
     }
@@ -197,7 +197,7 @@ export class Transmit extends EventTarget {
     this.reconnectAttempts++
   }
 
-  async subscribe(channel: string) {
+  subscription(channel: string) {
     const subscription = new Subscription({
       channel,
       httpClient: this.httpClient,
