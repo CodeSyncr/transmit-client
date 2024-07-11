@@ -1,8 +1,8 @@
-import { Hook } from "./hook"
-import { HookEvent } from "./hook_event"
-import { HttpClient } from "./http_clent"
-import { Subscription } from "./subscription"
-import { TransmitStatus } from "./transmit_status"
+import { Hook } from './hook'
+import { HookEvent } from './hook_event'
+import { HttpClient } from './http_clent'
+import { Subscription } from './subscription'
+import { TransmitStatus } from './transmit_status'
 
 interface TransmitOptions {
   baseUrl: string
@@ -51,11 +51,11 @@ export class Transmit extends EventTarget {
    */
   private eventSource: EventSource | undefined
 
-   /**
-    * EventTarget instance.
-    */
-   private eventTarget: EventTarget | null
-/**
+  /**
+   * EventTarget instance.
+   */
+  private eventTarget: EventTarget | null
+  /**
    * Number of reconnect attempts.
    */
   private reconnectAttempts: number = 0
@@ -198,7 +198,6 @@ export class Transmit extends EventTarget {
   }
 
   async subscribe(channel: string) {
-
     const subscription = new Subscription({
       channel,
       httpClient: this.httpClient,

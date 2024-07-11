@@ -1,5 +1,4 @@
-import { HookEvent } from "./hook_event"
-
+import { HookEvent } from './hook_event'
 
 export class Hook {
   #handlers = new Map<HookEvent, Set<(...args: any[]) => void>>()

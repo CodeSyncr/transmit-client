@@ -1,8 +1,7 @@
-import { Hook } from "./hook"
-import { HttpClient } from "./http_clent"
-import { SubscriptionStatus } from "./subscription_status"
-import { TransmitStatus } from "./transmit_status"
-
+import { Hook } from './hook'
+import { HttpClient } from './http_clent'
+import { SubscriptionStatus } from './subscription_status'
+import { TransmitStatus } from './transmit_status'
 
 interface SubscriptionOptions {
   channel: string
