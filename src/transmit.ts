@@ -1,54 +1,132 @@
+import { Hook } from "./hook"
+import { HookEvent } from "./hook_event"
+import { HttpClient } from "./http_clent"
+import { Subscription } from "./subscription"
+import { TransmitStatus } from "./transmit_status"
+
 interface TransmitOptions {
   baseUrl: string
-  eventSourceConstructor?: typeof EventSource
+  uidGenerator?: () => string
+  eventSourceFactory?: (url: string | URL, options: { withCredentials: boolean }) => EventSource
+  eventTargetFactory?: () => EventTarget | null
+  httpClientFactory?: (baseUrl: string, uid: string) => HttpClient
   beforeSubscribe?: (request: RequestInit) => void
   beforeUnsubscribe?: (request: RequestInit) => void
   maxReconnectAttempts?: number
   onReconnectAttempt?: (attempt: number) => void
   onReconnectFailed?: () => void
   removeSubscriptionOnZeroListener?: boolean
+  onSubscribeFailed?: (response: Response) => void
+  onSubscription?: (channel: string) => void
+  onUnsubscription?: (channel: string) => void
 }
-
-export const TransmitStatus = {
-  Initializing: 'initializing',
-  Connecting: 'connecting',
-  Connected: 'connected',
-  Disconnected: 'disconnected',
-  Reconnecting: 'reconnecting',
-}
-
-type TTransmitStatus = (typeof TransmitStatus)[keyof typeof TransmitStatus]
 
 export class Transmit extends EventTarget {
-  // Remove private identifiers
-  uid: string = crypto.randomUUID()
-  options: TransmitOptions
-  listeners: Map<string, Set<(message: any) => void>> = new Map()
-  status: TTransmitStatus = TransmitStatus.Initializing
-  eventSource!: EventSource
-  reconnectAttempts: number = 0
-  channelSubscriptionLock: Set<string> = new Set()
+  /**
+   * Unique identifier for this client.
+   */
+  #uid: string = crypto.randomUUID()
+  /**
+   * Options for this client.
+   */
+  private options: TransmitOptions
+  /**
+   * Registered subscriptions.
+   */
+  private subscriptions = new Map<string, Subscription>()
+  /**
+   * HTTP client instance.
+   */
+  private httpClient: HttpClient
+  /**
+   * Hook instance.
+   */
+  private hooks: Hook
+  /**
+   * Current status of the client.
+   */
+  private status: TransmitStatus = TransmitStatus.Initializing
+  /**
+   * EventSource instance.
+   */
+  private eventSource: EventSource | undefined
+
+   /**
+    * EventTarget instance.
+    */
+   private eventTarget: EventTarget | null
+/**
+   * Number of reconnect attempts.
+   */
+  private reconnectAttempts: number = 0
+  /**
+   * Returns the unique identifier of the client.
+   */
+  get uid() {
+    return this.#uid
+  }
 
   constructor(options: TransmitOptions) {
     super()
 
-    if (typeof options.eventSourceConstructor === 'undefined') {
-      options.eventSourceConstructor = EventSource
+    if (typeof options.uidGenerator === 'undefined') {
+      options.uidGenerator = () => crypto.randomUUID()
+    }
+
+    if (typeof options.eventSourceFactory === 'undefined') {
+      options.eventSourceFactory = (...args) => new EventSource(...args)
+    }
+
+    if (typeof options.eventTargetFactory === 'undefined') {
+      options.eventTargetFactory = () => new EventTarget()
+    }
+
+    if (typeof options.httpClientFactory === 'undefined') {
+      options.httpClientFactory = (baseUrl, uid) => new HttpClient({ baseUrl, uid })
     }
 
     if (typeof options.maxReconnectAttempts === 'undefined') {
       options.maxReconnectAttempts = 5
     }
 
-    if (typeof options.removeSubscriptionOnZeroListener === 'undefined') {
-      options.removeSubscriptionOnZeroListener = false
+    this.#uid = options.uidGenerator()
+    this.eventTarget = options.eventTargetFactory()
+    this.hooks = new Hook()
+    this.httpClient = options.httpClientFactory(options.baseUrl, this.#uid)
+
+    if (options.beforeSubscribe) {
+      this.hooks.register(HookEvent.BeforeSubscribe, options.beforeSubscribe)
+    }
+
+    if (options.beforeUnsubscribe) {
+      this.hooks.register(HookEvent.BeforeUnsubscribe, options.beforeUnsubscribe)
+    }
+
+    if (options.onReconnectAttempt) {
+      this.hooks.register(HookEvent.OnReconnectAttempt, options.onReconnectAttempt)
+    }
+
+    if (options.onReconnectFailed) {
+      this.hooks.register(HookEvent.OnReconnectFailed, options.onReconnectFailed)
+    }
+
+    if (options.onSubscribeFailed) {
+      this.hooks.register(HookEvent.OnSubscribeFailed, options.onSubscribeFailed)
+    }
+
+    if (options.onSubscription) {
+      this.hooks.register(HookEvent.OnSubscription, options.onSubscription)
+    }
+
+    if (options.onUnsubscription) {
+      this.hooks.register(HookEvent.OnUnsubscription, options.onUnsubscription)
     }
 
     this.options = options
     this.connect()
   }
 
-  changeStatus(status: TTransmitStatus) {
+  changeStatus(status: TransmitStatus) {
     this.status = status
     this.dispatchEvent(new CustomEvent(status))
   }
@@ -57,9 +135,9 @@ export class Transmit extends EventTarget {
     this.changeStatus(TransmitStatus.Connecting)
 
     const url = new URL(this.options.baseUrl + '/__transmit/events')
-    url.searchParams.append('uid', this.uid)
+    url.searchParams.append('uid', this.#uid)
 
-    this.eventSource = new this.options.eventSourceConstructor(url.toString(), {
+    this.eventSource = this.options.eventSourceFactory!(url, {
       withCredentials: true,
     })
 
@@ -68,19 +146,28 @@ export class Transmit extends EventTarget {
     this.eventSource.addEventListener('open', () => {
       this.changeStatus(TransmitStatus.Connected)
       this.reconnectAttempts = 0
+
+      for (const subscription of this.subscriptions.values()) {
+        if (subscription.isCreated) {
+          void subscription.forceCreate()
+        }
+      }
     })
   }
 
   onMessage(event: MessageEvent) {
     const data = JSON.parse(event.data)
-    const listeners = this.listeners.get(data.channel)
+    const subscription = this.subscriptions.get(data.channel)
 
-    if (typeof listeners === 'undefined') {
+    if (typeof subscription === 'undefined') {
       return
     }
 
-    for (const listener of listeners.values()) {
-      listener(data.payload)
+    try {
+      subscription.$runHandler(data.payload)
+    } catch (error) {
+      // TODO: Rescue
+      console.log(error)
     }
   }
 
@@ -91,6 +178,8 @@ export class Transmit extends EventTarget {
 
     this.changeStatus(TransmitStatus.Reconnecting)
 
+    this.hooks.onReconnectAttempt(this.reconnectAttempts + 1)
+
     if (this.options.onReconnectAttempt) {
       this.options.onReconnectAttempt(this.reconnectAttempts + 1)
     }
@@ -99,134 +188,35 @@ export class Transmit extends EventTarget {
       this.options.maxReconnectAttempts &&
       this.reconnectAttempts >= this.options.maxReconnectAttempts
     ) {
-      this.eventSource.close()
+      this.eventSource!.close()
 
-      if (this.options.onReconnectFailed) {
-        this.options.onReconnectFailed()
-      }
+      this.hooks.onReconnectFailed()
 
       return
     }
-
     this.reconnectAttempts++
-
-    // Use Array.from to create an array from the Set
-    const channels = Array.from(this.listeners.keys())
-    for (const channel of channels) {
-      void this.subscribe(channel)
-    }
   }
 
-  async subscribe(channel: string, callback?: any) {
-    if (this.status !== TransmitStatus.Connected) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(this.subscribe(channel, callback))
-        }, 100)
-      })
-    }
+  async subscribe(channel: string) {
 
-    const listeners = this.listeners.get(channel)
-
-    if (typeof listeners !== 'undefined') {
-      listeners.add(callback)
-      return
-    }
-
-    if (this.channelSubscriptionLock.has(channel)) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(this.subscribe(channel, callback))
-        }, 100)
-      })
-    }
-
-    this.channelSubscriptionLock.add(channel)
-
-    const request = new Request(`${this.options.baseUrl}/__transmit/subscribe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ uid: this.uid, channel }),
+    const subscription = new Subscription({
+      channel,
+      httpClient: this.httpClient,
+      hooks: this.hooks,
+      getEventSourceStatus: () => this.status,
     })
 
-    if (this.options.beforeSubscribe) {
-      this.options.beforeSubscribe(request)
+    if (this.subscriptions.has(channel)) {
+      return this.subscriptions.get(channel)!
     }
 
-    const response = await fetch(request)
+    this.subscriptions.set(channel, subscription)
 
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-
-    if (typeof callback !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-shadow
-      const listeners = this.listeners.get(channel)
-
-      if (typeof listeners === 'undefined') {
-        this.listeners.set(channel, new Set([callback]))
-      } else {
-        listeners.add(callback)
-      }
-
-      if (this.channelSubscriptionLock.has(channel)) {
-        this.channelSubscriptionLock.delete(channel)
-      }
-    }
+    return subscription
   }
 
-  async unsubscribe(channel: string) {
-    const request = new Request(`${this.options.baseUrl}/__transmit/unsubscribe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ uid: this.uid, channel }),
-    })
-
-    if (this.options.beforeUnsubscribe) {
-      this.options.beforeUnsubscribe(request)
-    }
-
-    const response = await fetch(request)
-
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-  }
-
-  on(event: Exclude<TTransmitStatus, 'connecting'>, callback: (event: CustomEvent) => void) {
-    this.addEventListener(event, callback)
-  }
-
-  listenOn<T = unknown>(channel: string, callback: (message: T) => void) {
-    void this.subscribe(channel, callback)
-
-    return (unsubscribeOnTheServer?: boolean) => {
-      const listeners = this.listeners.get(channel)
-
-      if (typeof listeners === 'undefined') {
-        return
-      }
-
-      listeners.delete(callback)
-
-      if (
-        (unsubscribeOnTheServer ?? this.options.removeSubscriptionOnZeroListener) &&
-        listeners.size === 0
-      ) {
-        void this.unsubscribe(channel)
-      }
-    }
-  }
-
-  listenOnce<T = unknown>(channel: string, callback: (message: T) => void) {
-    const unsubscribe = this.listenOn<T>(channel, (message) => {
-      callback(message)
-      unsubscribe()
-    })
+  on(event: Exclude<TransmitStatus, 'connecting'>, callback: (event: CustomEvent) => void) {
+    this.eventTarget?.addEventListener(event, callback)
   }
 
   close() {
