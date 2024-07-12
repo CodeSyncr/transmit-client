@@ -1,27 +1,20 @@
 {
   "name": "@brighthustle/transmit-client",
-  "version": "0.0.4-2",
   "description": "A client for the native Server-Sent-Event module of AdonisJS.",
-  "keywords": [
-    "client",
-    "sse-client",
-    "sse",
-    "server-sent-event",
-    "adonis",
-    "adonisjs",
-    "adonis-framework"
-  ],
-  "license": "MIT",
-  "author": "Kumar Yash, Romain Lanz",
+  "version": "0.0.4-2",
+  "engines": {
+    "node": ">=18.16.0"
+  },
+  "main": "./build/index.js",
   "type": "module",
-  "source": "index.ts",
+  "files": [
+    "src",
+    "build"
+  ],
   "exports": {
     "require": "./build/index.cjs",
     "default": "./build/index.modern.js"
   },
-  "main": "./build/index.js",
-  "module": "./build/index.module.js",
-  "unpkg": "./build/index.umd.js",
   "scripts": {
     "clean": "del-cli build",
     "typecheck": "tsc --noEmit",
@@ -44,13 +37,20 @@
     "prettier": "^3.0.0",
     "typescript": "^5.1.6"
   },
-  "files": [
-    "src",
-    "build"
+  "author": "Kumar Yash, Romain Lanz",
+  "license": "MIT",
+  "source": "index.ts",
+  "module": "./build/index.module.js",
+  "unpkg": "./build/index.umd.js",
+  "keywords": [
+    "client",
+    "sse-client",
+    "sse",
+    "server-sent-event",
+    "adonis",
+    "adonisjs",
+    "adonis-framework"
   ],
-  "engines": {
-    "node": ">=18.16.0"
-  },
   "eslintConfig": {
     "extends": "@adonisjs/eslint-config/package"
   },
