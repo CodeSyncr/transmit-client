@@ -1,7 +1,7 @@
 {
   "name": "@brighthustle/transmit-client",
   "description": "A client for the native Server-Sent-Event module of AdonisJS.",
-  "version": "0.0.4-2",
+  "version": "0.0.4",
   "engines": {
     "node": ">=18.16.0"
   },
